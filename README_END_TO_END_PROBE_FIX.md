@@ -1,0 +1,1 @@
+Replace astra-mobile-app/app.js and astra-mobile-worker-src/src/index.js. This adds a real cloud probe and honest backend/cloud status.

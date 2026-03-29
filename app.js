@@ -23,6 +23,7 @@ class AstraApp {
     this.lastFallbackText = '';
     this.localMemory = this.loadMemory();
     this.statusBadge = null;
+    this.lastSystemText = '';
     this.installStatusBadge();
     this.bindEvents();
     this.applyCfg();
@@ -96,7 +97,7 @@ class AstraApp {
     this.cloudHealthy = !!active;
     this.installStatusBadge();
     if (!this.statusBadge) return;
-    this.statusBadge.textContent = active ? 'облако: активно' : 'облако: локальный режим';
+    this.statusBadge.textContent = active ? 'backend: доступен' : 'backend: локальный режим';
     this.statusBadge.className = `badge ${active ? '' : 'soft'}`;
     this.statusSub.textContent = detail || (active ? 'модель отвечает' : 'часть ответов идёт из резервного режима');
   }
@@ -135,23 +136,33 @@ class AstraApp {
     return `${base}${path}`;
   }
 
-  async probeApi(verbose = true) {
-    try {
-      const res = await fetch(this.api('/diagnostics'), { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const active = Boolean(data.ok && data.has_key);
-      this.setCloudStatus(active, active ? 'backend и ключ на месте' : 'backend доступен, но ключ/облако не готовы');
-      if (verbose) this.renderSystem(active ? 'Связь с облаком подтверждена.' : 'Backend жив, но облачный слой не подтверждён.');
-      return data;
-    } catch (err) {
-      this.setCloudStatus(false, 'сайт живёт, но до backend сейчас не достучаться');
-      if (verbose) this.safeCloudNotice('Облако сейчас не отвечает стабильно. Astra перейдёт на тихий резервный режим.');
-      return null;
+  
+async probeApi(verbose = true) {
+  try {
+    const res = await fetch(this.api('/diagnostics?probe=1'), { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const active = Boolean(data.ok && data.backend_up && data.has_key && data.cloud_ready);
+    const detail = active
+      ? 'backend, ключ и облачный ответ подтверждены'
+      : data.has_key
+        ? 'backend жив, но облачный вызов сейчас не подтверждён'
+        : 'backend жив, но ключ не найден';
+    this.setCloudStatus(active, detail);
+    if (verbose) {
+      if (active) this.renderSystem('Облако активно: backend, ключ и живой ответ модели подтверждены.');
+      else if (data.has_key) this.safeCloudNotice(`Облако сейчас не подтвердило живой ответ модели${data.error_hint ? `: ${data.error_hint}` : ''}. Astra сможет работать тише и осторожнее.`);
+      else this.safeCloudNotice('Backend доступен, но в Worker не найден ключ OPENAI_API_KEY.');
     }
+    return data;
+  } catch (err) {
+    this.setCloudStatus(false, 'до backend сейчас не достучаться');
+    if (verbose) this.safeCloudNotice('До backend сейчас не достучаться. Astra перейдёт в тихий локальный режим.');
+    return null;
   }
+}
 
-  async requestJSON(path, body = {}, opts = {}) {
+async requestJSON(path, body = {}, opts = {}) {
     const url = this.api(path);
     const timeoutMs = opts.timeoutMs || 18000;
     const strategies = [
@@ -221,8 +232,10 @@ class AstraApp {
     for (const run of strategies) {
       try {
         const out = await run();
-        if (out?.ok) {
-          this.setCloudStatus(out.cloud_active !== false, out.cloud_active === false ? 'backend жив, но облачный слой ответил резервно' : 'облачный слой отвечает');
+        if (out?.ok || out?.state || out?.name) {
+          const cloudFlag = out?.cloud_active;
+          if (cloudFlag === false) this.setCloudStatus(true, 'backend доступен, ответ пришёл из резервного режима');
+          else this.setCloudStatus(true, 'backend доступен');
           return out;
         }
         lastErr = new Error(out?.error || 'Unknown request error');
@@ -290,13 +303,19 @@ class AstraApp {
     parent.appendChild(row);
   }
 
+
   renderSystem(text) {
-    const box = document.createElement('div');
-    box.className = 'msg meta';
-    box.textContent = text;
-    this.chatEl.appendChild(box);
+    const msg = String(text || '').trim();
+    if (!msg) return;
+    if (this.lastSystemText === msg) return;
+    this.lastSystemText = msg;
+    const div = document.createElement('div');
+    div.className = 'msg system';
+    div.textContent = msg;
+    this.chatEl.appendChild(div);
     this.chatEl.scrollTop = this.chatEl.scrollHeight;
   }
+
 
   async startCamera() {
     if (this.cameraStream) this.cameraStream.getTracks().forEach(t => t.stop());
@@ -488,7 +507,7 @@ class AstraApp {
       const reply = result.text || this.localChatFallback(input);
       this.renderMessage('bot', reply, { source: result.source || 'cloud' });
       if (result.state) await this.refreshState(result.state);
-      if (result.cloud_active === false) this.safeCloudNotice('Сейчас часть ответов идёт через тихий резервный режим. Основное облако нестабильно.');
+      if (result.cloud_active === false) this.safeCloudNotice('Сейчас облачный слой отвечает нестабильно. Astra ответит мягче и без лишнего шума.');
       if (result.should_speak) await this.speakText(reply);
     } catch (_) {
       const fallback = this.localChatFallback(input);
@@ -630,8 +649,14 @@ class AstraApp {
 
   async refreshState(provided = null) {
     try {
-      const data = provided || await this.requestJSON('/state', {}, { timeoutMs: 12000 });
+      let data = provided;
+      if (!data) {
+        const res = await fetch(this.api('/state'), { method: 'GET', mode: 'cors', cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        data = await res.json();
+      }
       const state = data.state || data;
+      if (!state || typeof state !== 'object') throw new Error('state missing');
       this.$('state').textContent = JSON.stringify(state, null, 2);
       this.$('chips').innerHTML = [
         `mood: ${state.mood}`,
@@ -639,8 +664,10 @@ class AstraApp {
         `discretion: ${state.discretion}`,
         ...(state.interests || []).slice(0, 8).map(x => `interest: ${x}`),
       ].map(x => `<span class="chip">${x}</span>`).join('');
+      return state;
     } catch (_) {
       this.renderSystem('Состояние пока не обновилось, но Astra может продолжать работать локально.');
+      return null;
     }
   }
 
