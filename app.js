@@ -58,7 +58,7 @@ class AstraApp {
   async postJSON(path, body) {
     const res = await fetch(this.api(path), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error(await res.text());
@@ -318,7 +318,7 @@ class AstraApp {
     try {
       const res = await fetch(this.api('/speak'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
         body: JSON.stringify({ text, voice: this.cfg().voice }),
       });
       if (!res.ok) throw new Error(await res.text());
