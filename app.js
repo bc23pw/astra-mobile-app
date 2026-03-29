@@ -17,9 +17,11 @@ class AstraApp {
     this.ignoreSpeechUntil = 0;
     this.cloudHealthy = null;
     this.localMemory = this.loadMemory();
+    this.styleLibrary = null;
     this.bindEvents();
     this.applyCfg();
-    this.renderSystem('Astra готова. Она наблюдательная, гибкая и не обязана говорить каждый раз.');
+    this.renderSystem('Astra готова. Она не обязана комментировать всё подряд.');
+    this.loadStyleLibrary();
     this.refreshState();
     this.probeApi(false);
   }
@@ -36,17 +38,9 @@ class AstraApp {
 
   loadMemory() {
     try {
-      const data = JSON.parse(localStorage.getItem('astraLocalMemory') || '{}');
-      return {
-        seenTopics: Array.isArray(data.seenTopics) ? data.seenTopics : [],
-        places: Array.isArray(data.places) ? data.places : [],
-        sounds: Array.isArray(data.sounds) ? data.sounds : [],
-        people: Array.isArray(data.people) ? data.people : [],
-        reactions: Array.isArray(data.reactions) ? data.reactions : [],
-        recent: Array.isArray(data.recent) ? data.recent : [],
-      };
+      return JSON.parse(localStorage.getItem('astraLocalMemory') || '{"seenTopics":[],"places":[],"sounds":[],"people":[],"entities":[],"phraseSeeds":[],"recent":[]}');
     } catch (_) {
-      return { seenTopics: [], places: [], sounds: [], people: [], reactions: [], recent: [] };
+      return { seenTopics: [], places: [], sounds: [], people: [], entities: [], phraseSeeds: [], recent: [] };
     }
   }
 
@@ -54,48 +48,62 @@ class AstraApp {
     localStorage.setItem('astraLocalMemory', JSON.stringify(this.localMemory));
   }
 
-  normMemoryText(value) {
-    return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 120);
+  async loadStyleLibrary() {
+    try {
+      const res = await fetch('conversation_library_ru_en.json', { cache: 'no-store' });
+      if (!res.ok) return;
+      this.styleLibrary = await res.json();
+    } catch (_) {
+      this.styleLibrary = null;
+    }
+  }
+
+  memorySnapshot() {
+    const m = this.localMemory || {};
+    return {
+      topics: (m.seenTopics || []).slice(0, 10),
+      places: (m.places || []).slice(0, 10),
+      sounds: (m.sounds || []).slice(0, 10),
+      people: (m.people || []).slice(0, 10),
+      entities: (m.entities || []).slice(0, 10),
+      phraseSeeds: (m.phraseSeeds || []).slice(0, 16),
+      recent: (m.recent || []).slice(0, 20),
+    };
+  }
+
+  absorbCloudMemory(payload = {}) {
+    const map = [
+      ['remember_people', 'person'],
+      ['remember_places', 'place'],
+      ['remember_sounds', 'sound'],
+      ['remember_entities', 'entity'],
+      ['phrase_seeds', 'phrase'],
+      ['noticed_topics', 'topic'],
+    ];
+    map.forEach(([key, kind]) => {
+      const arr = Array.isArray(payload[key]) ? payload[key] : [];
+      arr.forEach(item => this.remember(kind, String(item).slice(0, 120)));
+    });
   }
 
   remember(kind, value) {
-    const clean = this.normMemoryText(value);
-    if (!clean) return;
+    if (!value) return;
     const bucketMap = {
       topic: 'seenTopics',
       place: 'places',
       sound: 'sounds',
       person: 'people',
-      reaction: 'reactions',
+      entity: 'entities',
+      phrase: 'phraseSeeds',
     };
     const bucket = bucketMap[kind] || 'recent';
     this.localMemory[bucket] = this.localMemory[bucket] || [];
-    this.localMemory[bucket].unshift(clean);
-    this.localMemory[bucket] = [...new Set(this.localMemory[bucket])].slice(0, 24);
+    this.localMemory[bucket].unshift(value);
+    this.localMemory[bucket] = [...new Set(this.localMemory[bucket])].slice(0, 20);
     this.localMemory.recent = this.localMemory.recent || [];
-    this.localMemory.recent.unshift({ kind, value: clean, at: Date.now() });
-    this.localMemory.recent = this.localMemory.recent.slice(0, 60);
+    this.localMemory.recent.unshift({ kind, value, at: Date.now() });
+    this.localMemory.recent = this.localMemory.recent.slice(0, 40);
     this.saveMemory();
-  }
-
-  memoryContext() {
-    return {
-      topics: (this.localMemory.seenTopics || []).slice(0, 10),
-      places: (this.localMemory.places || []).slice(0, 10),
-      sounds: (this.localMemory.sounds || []).slice(0, 10),
-      people: (this.localMemory.people || []).slice(0, 10),
-      reactions: (this.localMemory.reactions || []).slice(0, 10),
-      recent: (this.localMemory.recent || []).slice(0, 12),
-    };
-  }
-
-  mergeMemoryUpdates(updates) {
-    if (!updates || typeof updates !== 'object') return;
-    for (const person of updates.people || []) this.remember('person', person);
-    for (const place of updates.places || []) this.remember('place', place);
-    for (const sound of updates.sounds || []) this.remember('sound', sound);
-    for (const topic of updates.topics || []) this.remember('topic', topic);
-    for (const reaction of updates.reactions || []) this.remember('reaction', reaction);
   }
 
   applyCfg() {
@@ -294,21 +302,23 @@ class AstraApp {
         manual,
         discretion: this.cfg().discretion / 100,
         lang: this.cfg().lang,
-        memory_context: this.memoryContext(),
+        local_memory: this.memorySnapshot(),
+        style_library: this.styleLibrary,
       }, { allowGetFallback: false });
 
-      this.mergeMemoryUpdates(result.memory_updates);
       if (result.comment) {
         this.renderMessage('bot', result.comment);
         if (result.should_speak) await this.speakText(result.comment);
       } else {
         this.renderSystem(result.internal_note || 'Astra посмотрела и решила пока промолчать.');
       }
+      this.absorbCloudMemory(result);
+      this.absorbCloudMemory(result);
+      this.absorbCloudMemory(result);
       if (result.state) await this.refreshState(result.state);
     } catch (_) {
       const fallback = this.localVisionFallback(this.currentSource);
       this.renderMessage('bot', fallback.comment);
-      this.remember('reaction', 'тихий резервный визуальный комментарий');
     }
   }
 
@@ -335,15 +345,16 @@ class AstraApp {
         manual: true,
         discretion: this.cfg().discretion / 100,
         lang: this.cfg().lang,
-        memory_context: this.memoryContext(),
+        local_memory: this.memorySnapshot(),
+        style_library: this.styleLibrary,
       }, { allowGetFallback: false });
-      this.mergeMemoryUpdates(result.memory_updates);
       if (result.comment) {
         this.renderMessage('bot', result.comment);
         if (result.should_speak) await this.speakText(result.comment);
       } else {
         this.renderSystem(result.internal_note || 'Astra изучила изображение молча.');
       }
+      this.absorbCloudMemory(result);
       if (result.state) await this.refreshState(result.state);
     } catch (_) {
       this.renderMessage('bot', 'Я приняла изображение, но облачный разбор сейчас не дотягивается. Могу пока просто запомнить, что ты хотела показать это позже.');
@@ -366,6 +377,8 @@ class AstraApp {
       'Я тебя слышу. Облако сейчас капризничает, но я рядом.',
       'Я уловила смысл. Сейчас отвечу своим резервным голосом.',
       'Я не пропала. Просто связь до облака пляшет, так что отвечу короче.',
+      'Связь шумит, но нить разговора я не теряю.',
+      'Я на месте. Пока отвечу мягко и по сути, без облачного слоя.',
     ];
     const prompts = [
       'Скажи, что для тебя здесь самое важное.',
@@ -373,10 +386,7 @@ class AstraApp {
       'Продолжай. Я удерживаю нить разговора.',
       'Дай мне одну деталь, и я зацеплюсь точнее.',
     ];
-    if (/привет|хей|здрав/i.test(low)) {
-      const knownPerson = (this.localMemory.people || [])[0];
-      return knownPerson ? `Привет. Я здесь. Мне всё ещё помнится ${knownPerson}. Можно говорить прямо.` : 'Привет. Я здесь. Можно говорить прямо.';
-    }
+    if (/привет|хей|здрав/i.test(low)) return 'Привет. Я здесь. Можно говорить прямо.';
     if (/\?$/.test(t)) return `${warm[Math.floor(Math.random()*warm.length)]} ${prompts[Math.floor(Math.random()*prompts.length)]}`;
     if (/помоги|помощь|что делать|не знаю/i.test(low)) return 'Я тебя слышу. Начнём с самого короткого: опиши проблему одной фразой, а я соберу следующий шаг.';
     return `${warm[Math.floor(Math.random()*warm.length)]} ${prompts[Math.floor(Math.random()*prompts.length)]}`;
@@ -388,17 +398,19 @@ class AstraApp {
     if (!textOverride) this.$('msg').value = '';
     this.renderMessage('user', input);
     this.remember('topic', input.slice(0, 80));
+    if (input.length > 12) this.remember('phrase', input.slice(0, 120));
     try {
       const result = await this.requestJSON('/chat', {
         text: input,
         mode: this.$('modeSel').value,
         lang: this.cfg().lang === 'auto' ? 'ru' : this.cfg().lang,
         origin,
-        memory_context: this.memoryContext(),
+        local_memory: this.memorySnapshot(),
+        style_library: this.styleLibrary,
       }, { allowGetFallback: true });
-      this.mergeMemoryUpdates(result.memory_updates);
       const reply = result.text || 'Astra решила ответить очень кратко.';
       this.renderMessage('bot', reply);
+      this.absorbCloudMemory(result);
       if (result.state) await this.refreshState(result.state);
       if (result.should_speak) await this.speakText(reply);
     } catch (_) {
@@ -423,8 +435,7 @@ class AstraApp {
     const low = text.toLowerCase();
     if (/кто меня слышит|ты меня слышишь|слышишь/i.test(low)) return { reply: 'Да, я тебя слышу. Сейчас облако нестабильно, но я с тобой.', should_speak: true };
     if (/помоги|что делать/i.test(low)) return { reply: 'Слышу запрос о помощи. Скажи коротко, что случилось, и я соберу следующий шаг.', should_speak: true };
-    const rememberedSound = (this.localMemory.sounds || [])[0];
-    return { reply: rememberedSound ? `Я услышала тебя. У меня ещё держится в памяти ${rememberedSound}. Продолжай.` : 'Я услышала тебя. Продолжай.', should_speak: true };
+    return { reply: 'Я услышала тебя. Продолжай.', should_speak: true };
   }
 
   async processTranscript(text, mode) {
@@ -437,15 +448,16 @@ class AstraApp {
         mode,
         addressed_guess: addressed,
         lang: this.cfg().lang === 'auto' ? 'ru' : this.cfg().lang,
-        memory_context: this.memoryContext(),
+        local_memory: this.memorySnapshot(),
+        style_library: this.styleLibrary,
       }, { allowGetFallback: true });
-      this.mergeMemoryUpdates(result.memory_updates);
       if (result.reply) {
         this.renderMessage('bot', result.reply);
         if (result.should_speak) await this.speakText(result.reply);
       } else {
         this.renderSystem(result.internal_note || 'Astra услышала и решила промолчать.');
       }
+      this.absorbCloudMemory(result);
       if (result.state) await this.refreshState(result.state);
     } catch (_) {
       const local = this.localAmbientReply(text, addressed);
@@ -614,6 +626,7 @@ class AstraApp {
     this.$('clearLocal').onclick = async () => {
       ['apiBase', 'voice', 'lang', 'theme', 'discretion', 'facing', 'astraLocalMemory'].forEach(k => localStorage.removeItem(k));
       this.localMemory = this.loadMemory();
+    this.styleLibrary = null;
       this.applyCfg();
       this.renderSystem('Локальные настройки сброшены.');
       await this.probeApi(false);

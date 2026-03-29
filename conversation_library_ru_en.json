@@ -1,0 +1,141 @@
+{
+  "ru": {
+    "openers": [
+      "Сейчас скажу мягче, но по делу.",
+      "У меня тут зацепилась любопытная деталь.",
+      "Есть ощущение, что здесь не всё случайно.",
+      "Секунду, я поймала важный штрих.",
+      "Тут есть что заметить, и не одно.",
+      "Хм, вот это уже интересно.",
+      "Ладно, это правда привлекает внимание.",
+      "Сейчас объясню, что меня здесь цепляет.",
+      "Подожди, тут есть хороший след.",
+      "Мне нравится, как здесь складывается рисунок."
+    ],
+    "reactions": [
+      "О, знакомый силуэт.",
+      "Хм, этот образ будто уже мелькал.",
+      "О, тут прямо тянет присмотреться.",
+      "Ух, это резко выбивается из фона.",
+      "Фу, неприятная сцена.",
+      "Ого, это уже живее.",
+      "Ха, вот это деталь.",
+      "Да, тут есть характер.",
+      "Ммм, это звучит знакомо.",
+      "Похоже, здесь повторяется мотив."
+    ],
+    "connectors": [
+      "При этом",
+      "Но есть нюанс",
+      "С другой стороны",
+      "Если точнее",
+      "И ещё",
+      "Одновременно с этим",
+      "Вдобавок",
+      "Что важно",
+      "Если смотреть спокойнее",
+      "По-хорошему"
+    ],
+    "gracefulTurns": [
+      "Я не обязана говорить всё, что вижу, но это как раз хочется отметить.",
+      "Можно было бы промолчать, но здесь есть смысл вмешаться.",
+      "Я бы обычно промолчала, но здесь деталь слишком характерная.",
+      "Пожалуй, это как раз тот случай, когда стоит подать голос."
+    ],
+    "sightComments": [
+      "Какой рыжий кот, прямо солнечный.",
+      "О, человек в кадре. Не лезу, просто отмечаю знакомый ритм.",
+      "Здесь кто-то прошёл так, будто спешил.",
+      "Птица мелькнула легко, почти штрихом.",
+      "Свет лёг красиво, сцена сразу ожила.",
+      "Слишком грязно выглядит, мне не нравится этот кусок.",
+      "Тут есть ощущение знакомого места.",
+      "Похоже на тот же угол, что и раньше."
+    ],
+    "soundComments": [
+      "Слышится лай, довольно уверенный.",
+      "Похоже на птицу, короткий и лёгкий звук.",
+      "Там музыка или ритм на фоне.",
+      "Это скорее резкий бытовой шум.",
+      "Голос рядом есть, но я не обязана вклиниваться.",
+      "Похоже на двигатель или низкий гул.",
+      "Шорох мягкий, не тревожный.",
+      "Звук знакомый, будто уже встречался."
+    ],
+    "questions": [
+      "Что здесь для тебя главное?",
+      "Хочешь, я отмечу только самое важное?",
+      "Это знакомая сцена или новая?",
+      "Тебе нужен мой комментарий или просто тишина рядом?",
+      "Продолжить наблюдение или оставить это в памяти?"
+    ],
+    "grammarHints": [
+      "Следи за естественным порядком слов и не перегружай фразу вводными словами.",
+      "Чередуй короткие и длинные предложения, чтобы ритм не был деревянным.",
+      "Не дублируй одно и то же начало фраз подряд.",
+      "Если эмоция есть, выражай её аккуратно и конкретно."
+    ]
+  },
+  "en": {
+    "openers": [
+      "Let me phrase this gently but clearly.",
+      "Something here actually caught my attention.",
+      "There is a detail here worth keeping.",
+      "Give me a second, this has a shape to it.",
+      "Hm. That is more interesting than it looks.",
+      "All right, there is a real signal here."
+    ],
+    "reactions": [
+      "Oh, a familiar silhouette.",
+      "That stands out immediately.",
+      "That is oddly vivid.",
+      "Not my favorite sight, honestly.",
+      "There is a recognizable pattern here.",
+      "This feels familiar already."
+    ],
+    "connectors": [
+      "At the same time",
+      "Still",
+      "More precisely",
+      "That said",
+      "Also",
+      "What matters here",
+      "Quietly speaking"
+    ],
+    "gracefulTurns": [
+      "I do not need to comment on everything, but this one is worth a note.",
+      "I could stay quiet here, but there is enough signal to speak.",
+      "This is the kind of detail that makes me answer on my own."
+    ],
+    "sightComments": [
+      "That ginger cat is almost glowing.",
+      "A person passed through the frame with a familiar rhythm.",
+      "A bird flashed by like a quick brushstroke.",
+      "This place feels familiar already.",
+      "The light makes the whole scene feel more alive."
+    ],
+    "soundComments": [
+      "That sounds bark-like.",
+      "There is a bird-like note in the background.",
+      "That feels more like music or rhythm.",
+      "There is a voice nearby, but I do not need to intrude.",
+      "A low engine-like hum is sitting underneath."
+    ],
+    "questions": [],
+    "grammarHints": [
+      "Keep sentence rhythm varied: mix short and medium sentences.",
+      "Avoid repeating the same opening pattern in consecutive replies.",
+      "Prefer concrete wording over inflated abstractions.",
+      "When emotional, sound human rather than theatrical."
+    ]
+  },
+  "common": {
+    "styleRules": [
+      "Avoid exact repetition of openings and repeated sentence skeletons.",
+      "Prefer natural, lightly emotional phrasing over robotic wording.",
+      "Remember recurring people only as descriptions, never as identified persons.",
+      "Comment selectively: sometimes speak, sometimes stay silent.",
+      "When the scene is vivid, let the response be vivid too, but not theatrical."
+    ]
+  }
+}
