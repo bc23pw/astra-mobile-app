@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Astra — watchful AI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar card">
+      <div>
+        <p class="eyebrow">watchful cloud assistant</p>
+        <h1>Astra</h1>
+        <p class="muted">Любопытная, но не болтливая. Иногда советует, иногда молчит и наблюдает.</p>
+      </div>
+      <div class="top-actions">
+        <button id="themeBtn" class="ghost">◐</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card controls">
+        <h2>Подключение</h2>
+        <label>API URL
+          <input id="apiBase" placeholder="https://your-worker.example.workers.dev" />
+        </label>
+        <div class="row compact">
+          <label>Голос
+            <select id="voiceSel">
+              <option>alloy</option>
+              <option>ash</option>
+              <option>ballad</option>
+              <option>coral</option>
+              <option>sage</option>
+              <option>shimmer</option>
+            </select>
+          </label>
+          <label>Язык
+            <select id="langSel">
+              <option value="ru">Русский</option>
+              <option value="en">English</option>
+              <option value="auto">Auto</option>
+            </select>
+          </label>
+        </div>
+        <label>Тактичность
+          <input id="discretion" type="range" min="0" max="100" value="74" />
+        </label>
+        <div class="row">
+          <button id="saveCfg">Сохранить</button>
+          <button id="refreshState" class="ghost">Обновить состояние</button>
+        </div>
+        <p class="muted small">Ключ хранится только в backend. В этот сайт его не вставляй.</p>
+      </section>
+
+      <section class="card sensor-card">
+        <div class="section-head">
+          <h2>Зрение</h2>
+          <span id="sourceBadge" class="badge">источник: камера</span>
+        </div>
+        <div class="row">
+          <button id="camBtn">Включить камеру</button>
+          <button id="switchBtn" class="ghost">Сменить камеру</button>
+        </div>
+        <div class="row">
+          <button id="screenBtn" class="ghost">Поделиться экраном</button>
+          <button id="stopScreenBtn" class="ghost">Стоп экран</button>
+        </div>
+        <div class="row">
+          <button id="observeBtn">Наблюдать</button>
+          <button id="autoBtn" class="ghost">Автонаблюдение</button>
+          <button id="uploadImageBtn" class="ghost">Скрин / фото</button>
+          <input id="imageUpload" type="file" accept="image/*" hidden />
+        </div>
+        <div class="video-wrap">
+          <video id="video" playsinline autoplay muted></video>
+          <video id="screenVideo" playsinline autoplay muted hidden></video>
+          <div id="visionHint" class="overlay-hint">Astra видит только то, что ты ей явно даёшь: камера, экран-шеринг или скрин.</div>
+        </div>
+      </section>
+
+      <section class="card sensor-card">
+        <div class="section-head">
+          <h2>Слух</h2>
+          <span id="listenBadge" class="badge soft">не слушает</span>
+        </div>
+        <div class="row">
+          <button id="listenBtn">Слушать меня</button>
+          <button id="ambientBtn" class="ghost">Фоновый слух</button>
+        </div>
+        <p class="muted small">Во фоновом режиме Astra чаще молчит. Обычно отвечает, только если слышит обращение к себе или явный запрос о помощи.</p>
+        <pre id="heardBox" class="log-box">Пока ничего не услышано.</pre>
+      </section>
+
+      <section class="card chat-card wide">
+        <div class="section-head">
+          <h2>Разговор</h2>
+          <div class="row compact">
+            <label>Режим
+              <select id="modeSel">
+                <option value="normal">Обычный</option>
+                <option value="advice">Совет</option>
+                <option value="listen">Просто выслушай</option>
+              </select>
+            </label>
+            <button id="speakBtn" class="ghost">Озвучить ответ</button>
+          </div>
+        </div>
+        <div id="chat" class="chat"></div>
+        <div class="composer">
+          <textarea id="msg" placeholder="Напиши Astra или просто расскажи ей что-то..."></textarea>
+          <div class="row">
+            <button id="sendBtn">Отправить</button>
+            <button id="clearLocal" class="ghost">Сбросить локальное</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card state-card">
+        <h2>Состояние</h2>
+        <div id="chips" class="chips"></div>
+        <pre id="state">Пока пусто.</pre>
+      </section>
+    </main>
+  </div>
+
+  <canvas id="canvas" hidden></canvas>
+  <script src="app.js"></script>
+</body>
+</html>
